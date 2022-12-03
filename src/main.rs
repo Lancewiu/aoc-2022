@@ -16,10 +16,8 @@ fn process_lines(reader: impl BufRead) -> anyhow::Result<u64> {
 
         elf.push(line.parse()?);
     }
-    Ok(elf_sum
-        .into_iter()
-        .max()
-        .ok_or(anyhow::Error::msg("no elves?"))?)
+    elf_sum.sort_unstable_by(|a, b| b.cmp(a));
+    Ok(elf_sum.into_iter().take(3).sum())
 }
 
 fn main() {
