@@ -1,6 +1,5 @@
 mod rps;
 
-use std::cmp;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::str;
@@ -19,17 +18,11 @@ fn process_lines(reader: impl BufRead) -> anyhow::Result<u64> {
         let mut tokens = line.split_ascii_whitespace();
         let play = rps::Shape::try_from_play(get_first_char(tokens.next())?)
             .ok_or_else(|| anyhow::Error::msg("invalid play character"))?;
-        let strategy = rps::Shape::try_from_strategy(get_first_char(tokens.next())?)
-            .ok_or_else(|| anyhow::Error::msg("invalid strategy character"))?;
-        let game_score = match strategy
-            .partial_cmp(&play)
-            .expect("Shape cmp impl incomplete!")
-        {
-            cmp::Ordering::Equal => 3,
-            cmp::Ordering::Greater => 6,
-            cmp::Ordering::Less => 0,
-        };
-        score += strategy.score() + game_score;
+        let outcome = rps::Outcome::try_from_strategy(get_first_char(tokens.next())?)
+            .ok_or_else(|| anyhow::Error::msg("invalid outcome character"))?;
+
+        let strategy = rps::Shape::from_strategy(&play, &outcome);
+        score += strategy.score() + outcome.score();
     }
     Ok(score)
 }

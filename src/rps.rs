@@ -1,5 +1,31 @@
 use std::cmp;
 
+#[derive(PartialEq, Eq)]
+pub enum Outcome {
+    Win,
+    Loss,
+    Draw,
+}
+
+impl Outcome {
+    pub fn try_from_strategy(code: char) -> Option<Outcome> {
+        match code {
+            'X' => Some(Outcome::Loss),
+            'Y' => Some(Outcome::Draw),
+            'Z' => Some(Outcome::Win),
+            _ => None,
+        }
+    }
+
+    pub fn score(&self) -> u64 {
+        match self {
+            Outcome::Draw => 3,
+            Outcome::Loss => 0,
+            Outcome::Win => 6,
+        }
+    }
+}
+
 // cannot be Ord as this fails the transitive property
 #[derive(PartialEq, Eq)]
 pub enum Shape {
@@ -40,12 +66,23 @@ impl Shape {
         }
     }
 
-    pub fn try_from_strategy(code: char) -> Option<Shape> {
-        match code {
-            'X' => Some(Shape::Rock),
-            'Y' => Some(Shape::Paper),
-            'Z' => Some(Shape::Scissors),
-            _ => None,
+    pub fn from_strategy(play: &Shape, outcome: &Outcome) -> Shape {
+        match play {
+            Shape::Rock => match outcome {
+                Outcome::Draw => Shape::Rock,
+                Outcome::Loss => Shape::Scissors,
+                Outcome::Win => Shape::Paper,
+            },
+            Shape::Paper => match outcome {
+                Outcome::Draw => Shape::Paper,
+                Outcome::Loss => Shape::Rock,
+                Outcome::Win => Shape::Scissors,
+            },
+            Shape::Scissors => match outcome {
+                Outcome::Draw => Shape::Scissors,
+                Outcome::Loss => Shape::Paper,
+                Outcome::Win => Shape::Rock,
+            },
         }
     }
 
