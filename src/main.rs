@@ -11,8 +11,8 @@ fn str_to_range(dashed_range: &str) -> anyhow::Result<(u64, u64)> {
     Ok((start.parse()?, end.parse()?))
 }
 
-fn is_range_superset(a: (u64, u64), b: (u64, u64)) -> bool {
-    (a.0 <= b.0 && a.1 >= b.1) || (b.0 <= a.0 && b.1 >= a.1)
+fn is_range_overlapping(a: (u64, u64), b: (u64, u64)) -> bool {
+    (a.0 <= b.0 && a.1 >= b.0) || (b.0 <= a.0 && b.1 >= a.0)
 }
 
 fn process_lines(reader: impl BufRead) -> anyhow::Result<u64> {
@@ -24,7 +24,7 @@ fn process_lines(reader: impl BufRead) -> anyhow::Result<u64> {
             .ok_or_else(|| anyhow::Error::msg("invalid pair"))?;
         let first_range = str_to_range(first)?;
         let second_range = str_to_range(second)?;
-        if is_range_superset(first_range, second_range) {
+        if is_range_overlapping(first_range, second_range) {
             count += 1;
         }
     }
