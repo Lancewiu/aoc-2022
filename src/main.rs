@@ -4,40 +4,31 @@ use std::str;
 
 const FILENAME: &str = "data/input.txt";
 
-fn process_lines(reader: impl BufRead) -> anyhow::Result<u64> {
-    let mut priorities: u64 = 0;
-    let mut first_sack: Vec<char> = Vec::new();
-    let mut second_sack: Vec<char> = Vec::new();
-    for (i_line, line_result) in reader.lines().enumerate() {
-        let mut rucksack: Vec<char> = line_result?.chars().collect();
-        if 2 != i_line % 3 {
-            if 0 == i_line % 3 {
-                first_sack = rucksack;
-            } else {
-                second_sack = rucksack;
-            }
-            continue;
-        }
-        first_sack.sort();
-        first_sack.dedup();
-        second_sack.sort();
-        second_sack.dedup();
-        rucksack.sort();
-        rucksack.dedup();
+fn str_to_range(dashed_range: &str) -> anyhow::Result<(u64, u64)> {
+    let (start, end) = dashed_range
+        .split_once('-')
+        .ok_or_else(|| anyhow::Error::msg("invalid range format"))?;
+    Ok((start.parse()?, end.parse()?))
+}
 
-        let common_item = rucksack
-            .into_iter()
-            .find(|item| first_sack.contains(item) && second_sack.contains(item))
-            .ok_or_else(|| anyhow::Error::msg("no common item found"))?;
-        let item_priority = (common_item as u32)
-            - if common_item.is_ascii_uppercase() {
-                38
-            } else {
-                96
-            };
-        priorities += item_priority as u64;
+fn is_range_superset(a: (u64, u64), b: (u64, u64)) -> bool {
+    (a.0 <= b.0 && a.1 >= b.1) || (b.0 <= a.0 && b.1 >= a.1)
+}
+
+fn process_lines(reader: impl BufRead) -> anyhow::Result<u64> {
+    let mut count = 0u64;
+    for line_result in reader.lines() {
+        let line = line_result?;
+        let (first, second) = line
+            .split_once(',')
+            .ok_or_else(|| anyhow::Error::msg("invalid pair"))?;
+        let first_range = str_to_range(first)?;
+        let second_range = str_to_range(second)?;
+        if is_range_superset(first_range, second_range) {
+            count += 1;
+        }
     }
-    Ok(priorities)
+    Ok(count)
 }
 
 fn main() {
@@ -46,8 +37,8 @@ fn main() {
             Err(err) => {
                 eprintln!("Could not process file {}:\n  {}", FILENAME, err);
             }
-            Ok(priorities) => {
-                println!("priorities: {}", priorities);
+            Ok(num_subset) => {
+                println!("# of subset pairs: {}", num_subset);
             }
         },
         Err(err) => {
