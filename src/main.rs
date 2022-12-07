@@ -4,31 +4,55 @@ use std::str;
 
 const FILENAME: &str = "data/input.txt";
 
-fn str_to_range(dashed_range: &str) -> anyhow::Result<(u64, u64)> {
-    let (start, end) = dashed_range
-        .split_once('-')
-        .ok_or_else(|| anyhow::Error::msg("invalid range format"))?;
-    Ok((start.parse()?, end.parse()?))
-}
+fn process_lines(reader: impl BufRead) -> anyhow::Result<String> {
+    let mut line_iter = reader.lines();
 
-fn is_range_overlapping(a: (u64, u64), b: (u64, u64)) -> bool {
-    (a.0 <= b.0 && a.1 >= b.0) || (b.0 <= a.0 && b.1 >= a.0)
-}
+    let mut stacks: Vec<Vec<char>> = Vec::with_capacity(9);
+    (0..9).for_each(|_| stacks.push(Vec::with_capacity(8)));
+    for _ in 0..8 {
+        // parse initial stack state
+        let line = line_iter
+            .next()
+            .ok_or_else(|| anyhow::Error::msg("incomplete stack text!"))??;
+        let crate_iter = line.chars().enumerate().filter(|(_, c)| c.is_alphabetic());
 
-fn process_lines(reader: impl BufRead) -> anyhow::Result<u64> {
-    let mut count = 0u64;
-    for line_result in reader.lines() {
-        let line = line_result?;
-        let (first, second) = line
-            .split_once(',')
-            .ok_or_else(|| anyhow::Error::msg("invalid pair"))?;
-        let first_range = str_to_range(first)?;
-        let second_range = str_to_range(second)?;
-        if is_range_overlapping(first_range, second_range) {
-            count += 1;
+        for (char_id, crate_id) in crate_iter {
+            let stack_index = char_id
+                .checked_sub(1)
+                .map(|id| id / 4)
+                .ok_or_else(|| anyhow::Error::msg("invalid stack text!"))?;
+            stacks[stack_index].push(crate_id);
         }
     }
-    Ok(count)
+    // reverse all stacks
+    stacks.iter_mut().for_each(|stack| stack.reverse());
+
+    for line_result in line_iter.skip(2) {
+        // process commands
+        let line = line_result?;
+        let values: Vec<u64> = line
+            .split_ascii_whitespace()
+            .skip(1)
+            .step_by(2)
+            .take(3)
+            .map(|n_str| n_str.parse())
+            .collect::<Result<Vec<u64>, _>>()?;
+        let n = values[0];
+        let source_stack_index = (values[1] - 1) as usize;
+        let dest_stack_index = (values[2] - 1) as usize;
+        for _ in 0..n {
+            let crate_id = stacks[source_stack_index]
+                .pop()
+                .ok_or_else(|| anyhow::Error::msg("crane had nothing to grab!"))?;
+            stacks[dest_stack_index].push(crate_id);
+        }
+    }
+
+    stacks
+        .into_iter()
+        .map(|mut stack| stack.pop())
+        .collect::<Option<String>>()
+        .ok_or_else(|| anyhow::Error::msg("empty stacks encountered!"))
 }
 
 fn main() {
