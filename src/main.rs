@@ -30,22 +30,22 @@ fn process_lines(reader: impl BufRead) -> anyhow::Result<String> {
     for line_result in line_iter.skip(2) {
         // process commands
         let line = line_result?;
-        let values: Vec<u64> = line
+        let values: Vec<usize> = line
             .split_ascii_whitespace()
             .skip(1)
             .step_by(2)
             .take(3)
             .map(|n_str| n_str.parse())
-            .collect::<Result<Vec<u64>, _>>()?;
+            .collect::<Result<Vec<usize>, _>>()?;
         let n = values[0];
-        let source_stack_index = (values[1] - 1) as usize;
-        let dest_stack_index = (values[2] - 1) as usize;
-        for _ in 0..n {
-            let crate_id = stacks[source_stack_index]
-                .pop()
-                .ok_or_else(|| anyhow::Error::msg("crane had nothing to grab!"))?;
-            stacks[dest_stack_index].push(crate_id);
-        }
+        let i_source_stack = values[1] - 1;
+        let i_dest_stack = values[2] - 1;
+        let split_index = stacks[i_source_stack]
+            .len()
+            .checked_sub(n)
+            .ok_or_else(|| anyhow::Error::msg("encountered empty stack!"))?;
+        let mut temp_stack = stacks[i_source_stack].split_off(split_index);
+        stacks[i_dest_stack].append(&mut temp_stack);
     }
 
     stacks
