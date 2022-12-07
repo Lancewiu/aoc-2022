@@ -4,55 +4,26 @@ use std::str;
 
 const FILENAME: &str = "data/input.txt";
 
-fn process_lines(reader: impl BufRead) -> anyhow::Result<String> {
-    let mut line_iter = reader.lines();
+fn process_lines(reader: impl BufRead) -> anyhow::Result<usize> {
+    let mut buffer: Vec<u8> = Vec::with_capacity(5);
+    for (i, byte_res) in reader.bytes().enumerate() {
+        buffer.push(byte_res?);
+        if buffer.len() < 4 {
+            continue;
+        }
 
-    let mut stacks: Vec<Vec<char>> = Vec::with_capacity(9);
-    (0..9).for_each(|_| stacks.push(Vec::with_capacity(8)));
-    for _ in 0..8 {
-        // parse initial stack state
-        let line = line_iter
-            .next()
-            .ok_or_else(|| anyhow::Error::msg("incomplete stack text!"))??;
-        let crate_iter = line.chars().enumerate().filter(|(_, c)| c.is_alphabetic());
+        if buffer.len() > 4 {
+            buffer.remove(0);
+        }
 
-        for (char_id, crate_id) in crate_iter {
-            let stack_index = char_id
-                .checked_sub(1)
-                .map(|id| id / 4)
-                .ok_or_else(|| anyhow::Error::msg("invalid stack text!"))?;
-            stacks[stack_index].push(crate_id);
+        let mut unique_buffer = buffer.clone();
+        unique_buffer.sort();
+        unique_buffer.dedup();
+        if 4 == unique_buffer.len() {
+            return Ok(i + 1);
         }
     }
-    // reverse all stacks
-    stacks.iter_mut().for_each(|stack| stack.reverse());
-
-    for line_result in line_iter.skip(2) {
-        // process commands
-        let line = line_result?;
-        let values: Vec<usize> = line
-            .split_ascii_whitespace()
-            .skip(1)
-            .step_by(2)
-            .take(3)
-            .map(|n_str| n_str.parse())
-            .collect::<Result<Vec<usize>, _>>()?;
-        let n = values[0];
-        let i_source_stack = values[1] - 1;
-        let i_dest_stack = values[2] - 1;
-        let split_index = stacks[i_source_stack]
-            .len()
-            .checked_sub(n)
-            .ok_or_else(|| anyhow::Error::msg("encountered empty stack!"))?;
-        let mut temp_stack = stacks[i_source_stack].split_off(split_index);
-        stacks[i_dest_stack].append(&mut temp_stack);
-    }
-
-    stacks
-        .into_iter()
-        .map(|mut stack| stack.pop())
-        .collect::<Option<String>>()
-        .ok_or_else(|| anyhow::Error::msg("empty stacks encountered!"))
+    Err(anyhow::Error::msg("failed to find a valid index!"))
 }
 
 fn main() {
@@ -61,8 +32,8 @@ fn main() {
             Err(err) => {
                 eprintln!("Could not process file {}:\n  {}", FILENAME, err);
             }
-            Ok(num_subset) => {
-                println!("# of subset pairs: {}", num_subset);
+            Ok(i_start_of_packet) => {
+                println!("start-of-packet index: {}", i_start_of_packet);
             }
         },
         Err(err) => {
