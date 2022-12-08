@@ -29,7 +29,11 @@ fn process_lines(reader: impl BufRead) -> anyhow::Result<usize> {
                             let mut new_path: Vec<String> =
                                 dir.split(DELIMITER).map(|s| s.to_string()).collect();
                             if new_path[0].is_empty() {
-                                current_path = new_path;
+                                current_path = if new_path[1].is_empty() {
+                                    vec!["".to_string()]
+                                } else {
+                                    new_path
+                                };
                             } else {
                                 current_path.append(&mut new_path);
                             }
@@ -45,7 +49,7 @@ fn process_lines(reader: impl BufRead) -> anyhow::Result<usize> {
             size_str => {
                 let file_size: usize = size_str.parse().expect("invalid file size value");
                 let num_paths = current_path.len();
-                for right_offset in (1..=num_paths).rev() {
+                for right_offset in (2..=num_paths).rev() {
                     path_to_size
                         .entry(current_path[..right_offset].join(DELIMITER))
                         .and_modify(|size| {
@@ -53,14 +57,30 @@ fn process_lines(reader: impl BufRead) -> anyhow::Result<usize> {
                         })
                         .or_insert(file_size);
                 }
+                path_to_size
+                    .entry("/".to_string())
+                    .and_modify(|size| *size += file_size)
+                    .or_insert(file_size);
             }
         }
     }
 
-    Ok(path_to_size
+    let max_space: usize = 70_000_000;
+    let required_space: usize = 30_000_000;
+    let used_space = path_to_size["/"];
+    let space_needed = required_space.saturating_sub(max_space - used_space);
+
+    path_to_size
         .values()
-        .filter(|dir_size| **dir_size <= 100_000)
-        .sum())
+        .filter(|dir_size| **dir_size >= space_needed)
+        .min()
+        .copied()
+        .ok_or_else(|| {
+            anyhow::Error::msg(format!(
+                "failed to find deletable directory size! Searched for size >= {}",
+                space_needed
+            ))
+        })
 }
 
 fn main() {
