@@ -21,25 +21,27 @@ fn process_lines(reader: impl BufRead) -> anyhow::Result<usize> {
         .ok_or_else(|| anyhow::Error::msg("non-digit encountered"))?;
     let field = Field::from_raw(field_raw, width, height);
 
-    let mut num_internal_visible = 0;
+    let mut max_scene_score = 0;
     for i_x in 1..(width - 1) {
         for i_y in 1..(height - 1) {
             let cursor = Coordinate(i_x, i_y);
             let cursor_height = field.get_value(cursor).expect("impossible cursor");
 
             //eprintln!("cursor {:?} [{}]", cursor, cursor_height);
-            let is_visible = [Direction::N, Direction::S, Direction::E, Direction::W]
+            let scenery: usize = [Direction::N, Direction::S, Direction::E, Direction::W]
                 .into_iter()
-                //.inspect(|direction| eprint!("direction: {:?} values: ", direction))
                 .map(|direction| field.values_to_edge(cursor, direction))
-                //.inspect(|edge_values| eprintln!("{:?}", edge_values))
-                .any(|edge_values| edge_values.into_iter().all(|height| cursor_height > height));
-            if is_visible {
-                num_internal_visible += 1;
-            }
+                .map(|edge_values| {
+                    edge_values
+                        .iter()
+                        .position(|height| cursor_height <= *height)
+                        .map_or(edge_values.len(), |index| 1 + index)
+                })
+                .product();
+            max_scene_score = max_scene_score.max(scenery);
         }
     }
-    Ok(2 * width + 2 * (height - 2) + num_internal_visible)
+    Ok(max_scene_score)
 }
 
 fn main() {
