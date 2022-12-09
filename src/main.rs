@@ -1,86 +1,45 @@
-use std::collections::HashMap;
+mod field;
+
+use field::{Coordinate, Direction, Field};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::str;
 
 const FILENAME: &str = "data/input.txt";
-const DELIMITER: &str = "/";
 
 fn process_lines(reader: impl BufRead) -> anyhow::Result<usize> {
-    let mut path_to_size: HashMap<String, usize> = HashMap::new();
-    let mut current_path = vec!["".to_string()];
+    let lines: Vec<String> = reader.lines().collect::<Result<Vec<String>, _>>()?;
+    let height = lines.len();
+    let width = lines
+        .get(0)
+        .ok_or_else(|| anyhow::Error::msg("empty lines encountered?"))?
+        .len();
+    let field_raw: Vec<u32> = lines
+        .iter()
+        .flat_map(|line| line.chars())
+        .map(|height_str| height_str.to_digit(10))
+        .collect::<Option<Vec<u32>>>()
+        .ok_or_else(|| anyhow::Error::msg("non-digit encountered"))?;
+    let field = Field::from_raw(field_raw, width, height);
 
-    for line_res in reader.lines() {
-        let line = line_res?;
-        let mut tokens = line.split_ascii_whitespace();
-        let context = tokens.next().expect("unexpected empty line");
+    let mut num_internal_visible = 0;
+    for i_x in 1..(width - 1) {
+        for i_y in 1..(height - 1) {
+            let cursor = Coordinate(i_x, i_y);
+            let cursor_height = field.get_value(cursor).expect("impossible cursor");
 
-        match context {
-            "$" => {
-                let command = tokens.next().expect("invalid command");
-                match command {
-                    "cd" => {
-                        let dir = tokens.next().expect("`cd` command missing argument");
-                        if ".." == dir {
-                            if 1 < current_path.len() {
-                                current_path.pop();
-                            }
-                        } else {
-                            let mut new_path: Vec<String> =
-                                dir.split(DELIMITER).map(|s| s.to_string()).collect();
-                            if new_path[0].is_empty() {
-                                current_path = if new_path[1].is_empty() {
-                                    vec!["".to_string()]
-                                } else {
-                                    new_path
-                                };
-                            } else {
-                                current_path.append(&mut new_path);
-                            }
-                        }
-                    }
-                    "ls" => {}
-                    tok => {
-                        panic!("unexpected token `{}` encountered", tok);
-                    }
-                }
-            }
-            "dir" => {}
-            size_str => {
-                let file_size: usize = size_str.parse().expect("invalid file size value");
-                let num_paths = current_path.len();
-                for right_offset in (2..=num_paths).rev() {
-                    path_to_size
-                        .entry(current_path[..right_offset].join(DELIMITER))
-                        .and_modify(|size| {
-                            *size += file_size;
-                        })
-                        .or_insert(file_size);
-                }
-                path_to_size
-                    .entry("/".to_string())
-                    .and_modify(|size| *size += file_size)
-                    .or_insert(file_size);
+            //eprintln!("cursor {:?} [{}]", cursor, cursor_height);
+            let is_visible = [Direction::N, Direction::S, Direction::E, Direction::W]
+                .into_iter()
+                //.inspect(|direction| eprint!("direction: {:?} values: ", direction))
+                .map(|direction| field.values_to_edge(cursor, direction))
+                //.inspect(|edge_values| eprintln!("{:?}", edge_values))
+                .any(|edge_values| edge_values.into_iter().all(|height| cursor_height > height));
+            if is_visible {
+                num_internal_visible += 1;
             }
         }
     }
-
-    let max_space: usize = 70_000_000;
-    let required_space: usize = 30_000_000;
-    let used_space = path_to_size["/"];
-    let space_needed = required_space.saturating_sub(max_space - used_space);
-
-    path_to_size
-        .values()
-        .filter(|dir_size| **dir_size >= space_needed)
-        .min()
-        .copied()
-        .ok_or_else(|| {
-            anyhow::Error::msg(format!(
-                "failed to find deletable directory size! Searched for size >= {}",
-                space_needed
-            ))
-        })
+    Ok(2 * width + 2 * (height - 2) + num_internal_visible)
 }
 
 fn main() {
@@ -89,8 +48,8 @@ fn main() {
             Err(err) => {
                 eprintln!("Could not process file {}:\n  {}", FILENAME, err);
             }
-            Ok(sum) => {
-                println!("sum: {}", sum);
+            Ok(n) => {
+                println!("# visible trees: {}", n);
             }
         },
         Err(err) => {
