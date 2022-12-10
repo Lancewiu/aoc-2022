@@ -47,9 +47,9 @@ impl Coordinate {
 }
 
 impl Sub for Coordinate {
-    type Output = (isize, isize);
+    type Output = Coordinate;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        (self.0.saturating_sub(rhs.0), self.1.saturating_sub(rhs.1))
+        Coordinate(self.0.saturating_sub(rhs.0), self.1.saturating_sub(rhs.1))
     }
 }

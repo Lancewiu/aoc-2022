@@ -10,7 +10,7 @@ use std::io::{BufRead, BufReader};
 const FILENAME: &str = "data/input.txt";
 
 fn process_lines(reader: impl BufRead) -> anyhow::Result<usize> {
-    let mut rope = Rope::new(Coordinate(0, 0), Coordinate(0, 0));
+    let mut rope = Rope::new(Coordinate(0, 0));
     let mut tail_positions: Vec<Coordinate> = Vec::new();
     for line_result in reader.lines() {
         let line = line_result?;
