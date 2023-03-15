@@ -2,9 +2,10 @@ mod inspection;
 
 use super::monkey;
 
+use std::collections::VecDeque;
 use std::io::BufRead;
 
-fn parse_items(line: &str) -> anyhow::Result<Vec<monkey::WorryLevel>> {
+fn parse_items(line: &str) -> anyhow::Result<VecDeque<monkey::WorryLevel>> {
     let colon_i = line
         .find(':')
         .ok_or_else(|| anyhow::Error::msg("malformed monkey line. missing colon separator"))?;
@@ -12,7 +13,7 @@ fn parse_items(line: &str) -> anyhow::Result<Vec<monkey::WorryLevel>> {
         .trim()
         .split(',')
         .map(|item_str| item_str.trim().parse::<monkey::WorryLevel>())
-        .collect::<Result<Vec<monkey::WorryLevel>, _>>()
+        .collect::<Result<VecDeque<monkey::WorryLevel>, _>>()
         .map_err(anyhow::Error::from)
 }
 
@@ -61,7 +62,7 @@ fn parse_monkey(lines: &[String]) -> anyhow::Result<monkey::Monkey> {
     }
 
     Ok(monkey::MonkeyFactory::initialize()
-        .with_items(parse_items(lines[1].as_str())?.as_slice())
+        .with_items(parse_items(lines[1].as_str())?)
         .with_inspection(parse_op(lines[2].as_str())?)
         .with_test_behavior(parse_tests(&lines[3..6])?)
         .spawn_monkey()

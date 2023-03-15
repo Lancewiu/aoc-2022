@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::fmt;
 
 pub type WorryLevel = u64;
@@ -22,7 +23,7 @@ impl TestBehavior {
 }
 
 pub struct Monkey {
-    items: Vec<WorryLevel>,
+    items: VecDeque<WorryLevel>,
     inspect: InspectionFunction,
     test: TestBehavior,
 }
@@ -47,17 +48,17 @@ impl Monkey {
         }
     }
 
-    pub fn throw_current_item_to(&mut self, other: &mut Monkey) {
-        if let Some(item) = self.items.pop() {
-            other.items.insert(0, item);
-        } else {
-            panic!("this monkey has no items!");
-        }
+    pub fn throw_current_item(&mut self) -> Option<WorryLevel> {
+        self.items.pop_front()
+    }
+
+    pub fn catch_item(&mut self, worry: WorryLevel) {
+        self.items.push_back(worry);
     }
 }
 
 pub struct MonkeyFactory {
-    items: Vec<WorryLevel>,
+    items: VecDeque<WorryLevel>,
     inspect: Option<InspectionFunction>,
     test: Option<TestBehavior>,
 }
@@ -65,14 +66,14 @@ pub struct MonkeyFactory {
 impl MonkeyFactory {
     pub fn initialize() -> Self {
         Self {
-            items: Vec::new(),
+            items: VecDeque::new(),
             inspect: None,
             test: None,
         }
     }
 
-    pub fn with_items(mut self, items: &[WorryLevel]) -> Self {
-        self.items = items.to_vec();
+    pub fn with_items(mut self, items: VecDeque<WorryLevel>) -> Self {
+        self.items = items;
         self
     }
 
