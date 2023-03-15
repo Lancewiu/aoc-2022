@@ -47,7 +47,7 @@ fn parse_tests(lines: &[String]) -> anyhow::Result<monkey::TestBehavior> {
         })?
         .parse()?;
     Ok(monkey::TestBehavior::new(
-        Box::new(|worry| 0 == worry % condition_divisor),
+        Box::new(move |worry| 0 == worry % condition_divisor),
         true_destination,
         false_destination,
     ))

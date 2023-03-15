@@ -30,8 +30,9 @@ impl Monkey {
         Some((*self.inspect)(*self.items.last()?))
     }
 
-    pub fn get_current_item(&self) -> Option<WorryLevel> {
-        self.items.last().copied()
+impl Monkey {
+    pub fn inspect_item(&self, worry: WorryLevel) -> WorryLevel {
+        (*self.inspect)(worry)
     }
 
     pub fn test_anxiety(&self, item: WorryLevel) -> MonkeyIndex {
@@ -73,16 +74,16 @@ impl MonkeyFactory {
     }
 
     pub fn with_inspection(mut self, inspection_function: InspectionFunction) -> Self {
-        self.inspect.insert(inspection_function);
+        self.inspect = Some(inspection_function);
         self
     }
 
     pub fn with_test_behavior(mut self, behavior: TestBehavior) -> Self {
-        self.test.insert(behavior);
+        self.test = Some(behavior);
         self
     }
 
-    pub fn spawn_monkey(&mut self) -> Option<Monkey> {
+    pub fn spawn_monkey(self) -> Option<Monkey> {
         let inspection_function = self.inspect?;
         let test_function = self.test?;
         Some(Monkey {
