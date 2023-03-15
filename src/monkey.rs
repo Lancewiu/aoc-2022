@@ -1,3 +1,5 @@
+use std::fmt;
+
 pub type WorryLevel = u64;
 pub type MonkeyIndex = usize;
 pub type InspectionFunction = Box<dyn Fn(WorryLevel) -> WorryLevel>;
@@ -25,10 +27,11 @@ pub struct Monkey {
     test: TestBehavior,
 }
 
-impl Monkey {
-    pub fn inspect_item(&self) -> Option<WorryLevel> {
-        Some((*self.inspect)(*self.items.last()?))
+impl fmt::Debug for Monkey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(f, "Monkey with Items: {:?}", self.items)
     }
+}
 
 impl Monkey {
     pub fn inspect_item(&self, worry: WorryLevel) -> WorryLevel {
